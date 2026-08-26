@@ -3,14 +3,14 @@ import {
   LPSData,
   NavItemKey,
   UserSession,
-  Milestone,
   Task,
   Constraint,
   LookaheadItem,
   Commitment,
   ActualEntry,
   ProjectConfig,
-  TradeItem
+  TradeItem,
+  Phase
 } from './types';
 import {
   loadLPSData,
@@ -122,16 +122,18 @@ export function App() {
   };
 
   // Milestone Actions
-  const handleAddMilestone = (m: Milestone) => {
-    const updated = { ...data, milestones: [...data.milestones, m] };
+  const handleAddPhase = (phase: Phase) => {
+    const updated = { ...data, phases: [...data.phases, phase] };
     updateData(updated);
-    showToast(`Milestone '${m.name}' added`, 'success');
+    showToast(`Milestone '${phase.phase_name}' added`, 'success');
   };
 
-  const handleDeleteMilestone = (id: string) => {
-    const updated = { ...data, milestones: data.milestones.filter((m) => m.id !== id) };
+  const handleUpdatePhaseStatus = (phaseId: string, status: Phase['status']) => {
+    const updated = {
+      ...data,
+      phases: data.phases.map((phase) => (phase.id === phaseId ? { ...phase, status } : phase))
+    };
     updateData(updated);
-    showToast('Milestone deleted', 'info');
   };
 
   // Task Actions
@@ -412,8 +414,8 @@ export function App() {
           {activeNav === 'plan-phase' && (
             <PhaseScheduleView
               data={data}
-              onAddMilestone={handleAddMilestone}
-              onDeleteMilestone={handleDeleteMilestone}
+              onAddPhase={handleAddPhase}
+              onUpdatePhaseStatus={handleUpdatePhaseStatus}
             />
           )}
 

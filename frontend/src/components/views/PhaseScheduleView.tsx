@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, GitBranch, Calendar, User, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Plus, GitBranch, Calendar, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { LPSData, Phase } from '../../types';
 import { formatDate, generateId } from '../../services/storage';
 
@@ -179,7 +179,7 @@ export const PhaseScheduleView: React.FC<PhaseScheduleViewProps> = ({
           </div>
         ) : (
           <div className="relative pl-6 border-l-2 border-[#334155] ml-4 space-y-6">
-            {data.phases.map((phase, idx) => {
+            {data.phases.map((phase) => {
               const floatDays = calculatePhaseFloat(phase.planned_finish);
               const isCritical = floatDays <= 0;
               const isWarning = floatDays > 0 && floatDays <= 14;
