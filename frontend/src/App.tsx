@@ -92,7 +92,13 @@ export function App() {
     }
   };
 
-  const handleLogin = (newUser: UserSession) => {
+  const handleLogin = (email: string) => {
+    const newUser: UserSession = {
+      id: `USR-${Date.now()}`,
+      name: email.split('@')[0].replace(/[._-]+/g, ' '),
+      email,
+      role: 'Project Manager'
+    };
     setUser(newUser);
     localStorage.setItem('lps_user_session', JSON.stringify(newUser));
     setSelectedProjectId(null);
@@ -423,6 +429,7 @@ export function App() {
         onSelect={handleSelectProject}
         onCreate={handleCreateProject}
         createProjectData={(details) => createProjectData(details)}
+        onLogout={handleLogout}
       />
     );
   }

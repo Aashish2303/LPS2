@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FolderKanban, Plus, ArrowRight, X, CalendarDays, MapPin, Building2 } from 'lucide-react';
+import { FolderKanban, Plus, ArrowRight, X, CalendarDays, MapPin, Building2, LogOut } from 'lucide-react';
 import { LPSData, ProjectRecord } from '../types';
 
 interface ProjectDashboardProps {
@@ -7,6 +7,7 @@ interface ProjectDashboardProps {
   onSelect: (project: ProjectRecord) => void;
   onCreate: (project: ProjectRecord) => void;
   createProjectData: (details: ProjectDetails) => LPSData;
+  onLogout: () => void;
 }
 
 interface ProjectDetails {
@@ -27,7 +28,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   projects,
   onSelect,
   onCreate,
-  createProjectData
+  createProjectData,
+  onLogout
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [details, setDetails] = useState<ProjectDetails>(emptyDetails);
@@ -76,9 +78,14 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           </div>
           <p className="mt-3 text-sm text-slate-400">Select a project workspace to continue.</p>
         </div>
-        <button type="button" onClick={() => setIsAdding(true)} className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400">
-          <Plus className="h-4 w-4" /> New Project
-        </button>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onLogout} className="flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:border-slate-500 hover:text-white">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+          <button type="button" onClick={() => setIsAdding(true)} className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400">
+            <Plus className="h-4 w-4" /> New Project
+          </button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-6xl py-8">
