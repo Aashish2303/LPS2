@@ -182,6 +182,18 @@ export interface LPSData {
   learnProgress: LearnProgress[];
 }
 
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  client: string;
+  location: string;
+  projectCode: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  data: LPSData;
+}
+
 export interface ReasonCode {
   id: number;
   code: string;

@@ -1,8 +1,9 @@
-import { LPSData, MetricRecord, Task } from '../types';
+import { LPSData, MetricRecord, ProjectRecord, Task } from '../types';
 import { getInitialSampleData } from '../data/initialData';
 
 const STORAGE_KEY = 'lps_data';
 const SESSION_KEY = 'lps_session_user';
+const PROJECTS_KEY = 'lps_projects';
 
 export function getSessionUser(): string | null {
   try {
@@ -64,6 +65,34 @@ export function saveData(data: LPSData): void {
   } catch (e) {
     console.error('Error saving LPS data to localStorage', e);
   }
+}
+
+export function loadProjects(): ProjectRecord[] {
+  try {
+    const raw = localStorage.getItem(PROJECTS_KEY);
+    if (raw) return JSON.parse(raw) as ProjectRecord[];
+    const data = getData();
+    const config = data.config;
+    const project: ProjectRecord = {
+      id: 'PRJ-001',
+      name: config.projectName || config.project_name || 'Chittor Site - Block B',
+      client: config.client || '',
+      location: 'Chittor Site',
+      projectCode: config.projectCode || '',
+      startDate: config.startDate || config.start_date || '',
+      endDate: config.endDate || config.end_date || '',
+      description: 'Migrated existing LPS workspace',
+      data
+    };
+    saveProjects([project]);
+    return [project];
+  } catch {
+    return [];
+  }
+}
+
+export function saveProjects(projects: ProjectRecord[]): void {
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
 }
 
 export function generateId(prefix: string): string {
@@ -293,6 +322,46 @@ export function exportDataAsJSON(customData?: LPSData): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(value: unknown): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value ?? '');
+  return `"${String(text).replace(/"/g, '""')}"`;
+}
+
+export function exportDataAsSpreadsheet(data: LPSData): void {
+  const sections = [
+    ['Project Configuration', [data.config]],
+    ['Phases', data.phases],
+    ['Trades', data.trades],
+    ['Areas', data.areas],
+    ['Tasks', data.tasks],
+    ['Constraints', data.constraints],
+    ['Lookahead', data.lookahead],
+    ['Commitments', data.commitments],
+    ['Actuals', data.actuals],
+    ['Metrics', data.metrics],
+    ['Closeouts', data.closeouts]
+  ] as [string, unknown[]][];
+  const rows: string[] = [];
+  sections.forEach(([name, records]) => {
+    rows.push(csvCell(name));
+    const keys = Array.from(new Set(records.flatMap((record) => Object.keys(record as object))));
+    if (keys.length) {
+      rows.push(keys.map(csvCell).join(','));
+      records.forEach((record) => rows.push(keys.map((key) => csvCell((record as Record<string, unknown>)[key])).join(',')));
+    }
+    rows.push('');
+  });
+  const blob = new Blob([rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `lps_spreadsheet_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
   URL.revokeObjectURL(url);
 }
 

@@ -10,7 +10,8 @@ import {
   ActualEntry,
   ProjectConfig,
   TradeItem,
-  Phase
+  Phase,
+  ProjectRecord
 } from './types';
 import {
   loadLPSData,
@@ -19,8 +20,11 @@ import {
   computeMetrics,
   refreshLookaheadReadiness,
   exportDataAsJSON,
+  exportDataAsSpreadsheet,
   importDataFromJSON,
-  getOpenConstraintsCountTotal
+  getOpenConstraintsCountTotal,
+  loadProjects,
+  saveProjects
 } from './services/storage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -43,6 +47,7 @@ import { FacilitatorGuidesView } from './components/views/FacilitatorGuidesView'
 import { ProjectConfigView } from './components/views/ProjectConfigView';
 import { TradesAreasView } from './components/views/TradesAreasView';
 import { InitializeSystemView } from './components/views/InitializeSystemView';
+import { ProjectDashboard } from './components/ProjectDashboard';
 
 export function App() {
   // 1. User Session state
@@ -57,6 +62,8 @@ export function App() {
 
   // 2. Main LPS Dataset state
   const [data, setData] = useState<LPSData>(() => loadLPSData());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() => loadProjects());
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   // 3. Navigation & Mobile Drawer state
   const [activeNav, setActiveNav] = useState<NavItemKey>('dashboard');
@@ -76,17 +83,26 @@ export function App() {
   const updateData = (newData: LPSData) => {
     setData(newData);
     saveLPSData(newData);
+    if (selectedProjectId) {
+      const updatedProjects = projects.map((project) =>
+        project.id === selectedProjectId ? { ...project, data: newData } : project
+      );
+      setProjects(updatedProjects);
+      saveProjects(updatedProjects);
+    }
   };
 
   const handleLogin = (newUser: UserSession) => {
     setUser(newUser);
     localStorage.setItem('lps_user_session', JSON.stringify(newUser));
+    setSelectedProjectId(null);
     showToast(`Welcome back, ${newUser.name}!`, 'success');
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('lps_user_session');
+    setSelectedProjectId(null);
     showToast('Logged out of LPS session', 'info');
   };
 
@@ -297,6 +313,61 @@ export function App() {
     showToast('Downloaded lps_data_backup.json', 'info');
   };
 
+  const handleExportSpreadsheet = () => {
+    exportDataAsSpreadsheet(data);
+    showToast('Downloaded LPS spreadsheet export', 'info');
+  };
+
+  const handleSelectProject = (project: ProjectRecord) => {
+    setSelectedProjectId(project.id);
+    setData(project.data);
+    saveLPSData(project.data);
+    setActiveNav('dashboard');
+  };
+
+  const createProjectData = (details: {
+    name: string;
+    client: string;
+    location: string;
+    projectCode: string;
+    startDate: string;
+    endDate: string;
+  }): LPSData => ({
+    ...loadLPSData(),
+    config: {
+      projectName: details.name,
+      project_name: details.name,
+      client: details.client,
+      projectCode: details.projectCode,
+      startDate: details.startDate,
+      start_date: details.startDate,
+      endDate: details.endDate,
+      end_date: details.endDate,
+      current_week_key: '2026-W35',
+      lookahead_weeks: 4,
+      projectManager: '',
+      leanChampion: ''
+    },
+    phases: [],
+    milestones: [],
+    tasks: [],
+    constraints: [],
+    lookahead: [],
+    commitments: [],
+    actuals: [],
+    metrics: [],
+    closeouts: [],
+    learnProgress: []
+  });
+
+  const handleCreateProject = (project: ProjectRecord) => {
+    const updatedProjects = [...projects, project];
+    setProjects(updatedProjects);
+    saveProjects(updatedProjects);
+    handleSelectProject(project);
+    showToast(`Project '${project.name}' created`, 'success');
+  };
+
   const handleImportJSON = (imported: LPSData) => {
     updateData(imported);
     showToast('LPS workspace restored from file', 'success');
@@ -343,6 +414,17 @@ export function App() {
   // If user is not logged in, show the Login / Persona Screen
   if (!user) {
     return <LoginView onLogin={handleLogin} />;
+  }
+
+  if (!selectedProjectId) {
+    return (
+      <ProjectDashboard
+        projects={projects}
+        onSelect={handleSelectProject}
+        onCreate={handleCreateProject}
+        createProjectData={(details) => createProjectData(details)}
+      />
+    );
   }
 
   return (
@@ -504,6 +586,7 @@ export function App() {
               data={data}
               onUpdateConfig={handleUpdateConfig}
               onExportJSON={handleExportJSON}
+              onExportSpreadsheet={handleExportSpreadsheet}
               onImportJSON={handleImportJSON}
               onResetData={handleResetSampleData}
             />

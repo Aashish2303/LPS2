@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Settings, Save, Download, Upload, Trash2, Calendar, FileText, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, Download, Upload, Trash2, Calendar, FileText, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import { LPSData, ProjectConfig } from '../../types';
 
 interface ProjectConfigViewProps {
   data: LPSData;
   onUpdateConfig: (config: ProjectConfig) => void;
   onExportJSON: () => void;
+  onExportSpreadsheet: () => void;
   onImportJSON: (importedData: LPSData) => void;
   onResetData: () => void;
 }
@@ -14,6 +15,7 @@ export const ProjectConfigView: React.FC<ProjectConfigViewProps> = ({
   data,
   onUpdateConfig,
   onExportJSON,
+  onExportSpreadsheet,
   onImportJSON,
   onResetData
 }) => {
@@ -166,7 +168,7 @@ export const ProjectConfigView: React.FC<ProjectConfigViewProps> = ({
           Data Management & LocalStorage Persistence
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
           {/* Export JSON */}
           <div className="p-4 rounded-lg bg-[#0f172a] border border-[#334155] flex flex-col justify-between space-y-3">
             <div>
@@ -185,6 +187,27 @@ export const ProjectConfigView: React.FC<ProjectConfigViewProps> = ({
               className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-[#f8fafc] text-xs font-bold rounded-lg border border-[#334155] transition-colors cursor-pointer"
             >
               Export JSON
+            </button>
+          </div>
+
+          {/* Export Spreadsheet */}
+          <div className="p-4 rounded-lg bg-[#0f172a] border border-[#334155] flex flex-col justify-between space-y-3">
+            <div>
+              <div className="text-xs font-bold text-[#f8fafc] flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-[#10b981]" />
+                <span>Export Spreadsheet</span>
+              </div>
+              <p className="text-[11px] text-[#94a3b8] mt-1">
+                Download project data as a CSV file that opens in Excel or Google Sheets.
+              </p>
+            </div>
+            <button
+              id="btn-export-spreadsheet"
+              type="button"
+              onClick={onExportSpreadsheet}
+              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-[#f8fafc] text-xs font-bold rounded-lg border border-[#334155] transition-colors cursor-pointer"
+            >
+              Export CSV
             </button>
           </div>
 
