@@ -51,14 +51,7 @@ import { ProjectDashboard } from './components/ProjectDashboard';
 
 export function App() {
   // 1. User Session state
-  const [user, setUser] = useState<UserSession | null>(() => {
-    try {
-      const saved = localStorage.getItem('lps_user_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<UserSession | null>(null);
 
   // 2. Main LPS Dataset state
   const [data, setData] = useState<LPSData>(() => loadLPSData());
@@ -100,7 +93,6 @@ export function App() {
       role: 'Project Manager'
     };
     setUser(newUser);
-    localStorage.setItem('lps_user_session', JSON.stringify(newUser));
     setSelectedProjectId(null);
     showToast(`Welcome back, ${newUser.name}!`, 'success');
   };
