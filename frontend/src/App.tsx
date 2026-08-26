@@ -352,6 +352,8 @@ export function App() {
       projectManager: '',
       leanChampion: ''
     },
+    trades: [],
+    areas: [],
     phases: [],
     milestones: [],
     tasks: [],
