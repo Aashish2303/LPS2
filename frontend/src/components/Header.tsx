@@ -126,10 +126,10 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header
       id="app-header"
-      className="h-16 border-b border-slate-700 bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 md:px-8 shrink-0 select-none z-20"
+      className="min-h-16 border-b border-slate-700 bg-slate-900/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6 md:px-8 shrink-0 select-none z-20"
     >
       {/* Left: Hamburger button (Mobile) + Section Title & Subtitle */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         {onToggleMobileMenu && (
           <button
             id="btn-hamburger-menu"
@@ -141,7 +141,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        <div className="min-w-0">
+        <div className="min-w-0 max-w-[calc(100vw-120px)] sm:max-w-none">
           <h2 className="text-base sm:text-lg font-semibold text-slate-100 truncate">{meta.title}</h2>
           <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold truncate max-w-[200px] sm:max-w-[320px] md:max-w-[450px]">
             {meta.subtitle.length > 40 ? projectName : meta.subtitle}
@@ -150,14 +150,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right: Week Selector, Divider, Settings */}
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-4">
         {onBackToProjects && (
           <button
             id="btn-back-to-projects"
             onClick={onBackToProjects}
             title="Back to Projects"
             aria-label="Back to Projects"
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-semibold text-slate-300 hover:border-amber-500 hover:text-amber-500 transition-colors cursor-pointer min-h-[40px]"
+            className="flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-700 px-2 py-2 text-xs font-semibold text-slate-300 hover:border-amber-500 hover:text-amber-500 transition-colors cursor-pointer sm:px-2.5"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Projects</span>
@@ -171,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
               id="header-week-select"
               value={currentWeek}
               onChange={(e) => onSelectWeek(e.target.value)}
-              className="appearance-none bg-slate-800 border border-slate-700 rounded-full px-3 sm:px-4 py-1.5 pr-7 sm:pr-8 text-xs font-mono text-slate-300 font-semibold cursor-pointer hover:border-slate-600 focus:outline-none focus:border-amber-500 transition-colors shadow-sm min-h-[36px]"
+              className="appearance-none bg-slate-800 border border-slate-700 rounded-full px-2.5 py-1.5 pr-7 text-xs font-mono text-slate-300 font-semibold cursor-pointer hover:border-slate-600 focus:outline-none focus:border-amber-500 transition-colors shadow-sm min-h-[36px] sm:px-4 sm:pr-8"
             >
               {uniqueWeeks.map((wk, idx) => (
                 <option key={`week-opt-${wk}-${idx}`} value={wk} className="bg-slate-900 text-slate-200">

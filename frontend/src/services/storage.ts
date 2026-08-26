@@ -4,6 +4,7 @@ import { getInitialSampleData } from '../data/initialData';
 const STORAGE_KEY = 'lps_data';
 const SESSION_KEY = 'lps_session_user';
 const PROJECTS_KEY = 'lps_projects';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 export function getSessionUser(): string | null {
   try {
@@ -93,6 +94,27 @@ export function loadProjects(): ProjectRecord[] {
 
 export function saveProjects(projects: ProjectRecord[]): void {
   localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+  if (API_BASE_URL) {
+    void fetch(`${API_BASE_URL}/api/projects`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(projects)
+    }).catch(() => undefined);
+  }
+}
+
+export async function syncProjectsFromServer(): Promise<ProjectRecord[] | null> {
+  if (!API_BASE_URL) return null;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/projects`);
+    if (!response.ok) return null;
+    const projects = (await response.json()) as ProjectRecord[];
+    if (!Array.isArray(projects)) return null;
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    return projects;
+  } catch {
+    return null;
+  }
 }
 
 export function generateId(prefix: string): string {

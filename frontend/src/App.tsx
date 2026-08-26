@@ -24,7 +24,8 @@ import {
   importDataFromJSON,
   getOpenConstraintsCountTotal,
   loadProjects,
-  saveProjects
+  saveProjects,
+  syncProjectsFromServer
 } from './services/storage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -57,6 +58,18 @@ export function App() {
   const [data, setData] = useState<LPSData>(() => loadLPSData());
   const [projects, setProjects] = useState<ProjectRecord[]>(() => loadProjects());
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    void syncProjectsFromServer().then((remoteProjects) => {
+      if (!remoteProjects) return;
+      if (remoteProjects.length === 0 && projects.length > 0) {
+        saveProjects(projects);
+        return;
+      }
+      setProjects(remoteProjects);
+    });
+  }, [user]);
 
   // 3. Navigation & Mobile Drawer state
   const [activeNav, setActiveNav] = useState<NavItemKey>('dashboard');

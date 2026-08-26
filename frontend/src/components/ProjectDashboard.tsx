@@ -69,8 +69,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 px-5 py-8 text-slate-100 sm:px-10">
-      <header className="mx-auto flex max-w-6xl items-center justify-between border-b border-slate-800 pb-6">
+    <div className="min-h-screen overflow-x-hidden bg-slate-950 px-4 py-6 text-slate-100 sm:px-8 sm:py-8">
+      <header className="mx-auto flex max-w-6xl flex-col items-start gap-5 border-b border-slate-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-amber-500 p-2.5 text-slate-950"><FolderKanban className="h-6 w-6" /></div>
@@ -78,11 +78,11 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           </div>
           <p className="mt-3 text-sm text-slate-400">Select a project workspace to continue.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={onLogout} className="flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:border-slate-500 hover:text-white">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
+          <button type="button" onClick={onLogout} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 py-2.5 text-sm font-semibold text-slate-300 hover:border-slate-500 hover:text-white sm:flex-none sm:px-4">
             <LogOut className="h-4 w-4" /> Sign out
           </button>
-          <button type="button" onClick={() => setIsAdding(true)} className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400">
+          <button type="button" onClick={() => setIsAdding(true)} className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 px-3 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400 sm:flex-none sm:px-4">
             <Plus className="h-4 w-4" /> New Project
           </button>
         </div>
@@ -103,7 +103,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         }
       </main>
 
-      {isAdding && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4"><form onSubmit={handleSubmit} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"><div className="flex items-center justify-between border-b border-slate-700 pb-4"><div><h2 className="text-xl font-bold">Create New Project</h2><p className="mt-1 text-xs text-slate-400">Set the workspace details before entering the LPS boards.</p></div><button type="button" onClick={() => setIsAdding(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{field('name', 'Project name', 'text', true)}{field('client', 'Client / owner', 'text', true)}{field('location', 'Site location', 'text', true)}{field('projectCode', 'Project code')}{field('startDate', 'Start date', 'date', true)}{field('endDate', 'Target completion', 'date')}<label className="block text-xs font-semibold text-slate-300 sm:col-span-2">Description<textarea value={details.description} onChange={(event) => update('description', event.target.value)} rows={3} className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-amber-500" /></label></div><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setIsAdding(false)} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300">Cancel</button><button type="submit" className="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950">Create Project</button></div></form></div>}
+      {isAdding && <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/85 p-4"><form onSubmit={handleSubmit} className="my-4 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl sm:p-6"><div className="flex items-center justify-between border-b border-slate-700 pb-4"><div><h2 className="text-xl font-bold">Create New Project</h2><p className="mt-1 text-xs text-slate-400">Set the workspace details before entering the LPS boards.</p></div><button type="button" onClick={() => setIsAdding(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close"><X className="h-5 w-5" /></button></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{field('name', 'Project name', 'text', true)}{field('client', 'Client / owner', 'text', true)}{field('location', 'Site location', 'text', true)}{field('projectCode', 'Project code')}{field('startDate', 'Start date', 'date', true)}{field('endDate', 'Target completion', 'date')}<label className="block text-xs font-semibold text-slate-300 sm:col-span-2">Description<textarea value={details.description} onChange={(event) => update('description', event.target.value)} rows={3} className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-amber-500" /></label></div><div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row"><button type="button" onClick={() => setIsAdding(false)} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300">Cancel</button><button type="submit" className="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950">Create Project</button></div></form></div>}
     </div>
   );
 };
