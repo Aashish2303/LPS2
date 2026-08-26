@@ -104,6 +104,12 @@ export function App() {
     showToast('Logged out of LPS session', 'info');
   };
 
+  const handleBackToProjects = () => {
+    setSelectedProjectId(null);
+    setActiveNav('dashboard');
+    setIsMobileMenuOpen(false);
+  };
+
   const currentWeek = data.config.current_week_key;
 
   // Compute live metrics for the current week
@@ -476,6 +482,7 @@ export function App() {
             setIsMobileMenuOpen(false);
           }}
           onLogout={handleLogout}
+          onBackToProjects={handleBackToProjects}
           onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
         />
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, ChevronDown, Menu } from 'lucide-react';
+import { Settings, ChevronDown, Menu, ArrowLeft } from 'lucide-react';
 import { NavItemKey, ProjectConfig, UserSession } from '../types';
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   user?: UserSession | null;
   onNavigate?: (key: NavItemKey) => void;
   onLogout?: () => void;
+  onBackToProjects?: () => void;
   onToggleMobileMenu?: () => void;
 }
 
@@ -21,7 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   availableWeeks = [],
   onSelectWeek,
   onNavigate,
-  onToggleMobileMenu
+  onToggleMobileMenu,
+  onBackToProjects
 }) => {
   const getNavMeta = (nav: NavItemKey): { title: string; subtitle: string } => {
     switch (nav) {
@@ -149,6 +151,19 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Week Selector, Divider, Settings */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        {onBackToProjects && (
+          <button
+            id="btn-back-to-projects"
+            onClick={onBackToProjects}
+            title="Back to Projects"
+            aria-label="Back to Projects"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-semibold text-slate-300 hover:border-amber-500 hover:text-amber-500 transition-colors cursor-pointer min-h-[40px]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Projects</span>
+          </button>
+        )}
+
         {/* Week Selector Dropdown Pill */}
         {onSelectWeek && uniqueWeeks.length > 0 ? (
           <div className="relative flex items-center">
