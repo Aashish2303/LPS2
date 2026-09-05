@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CalendarCheck, ShieldAlert, CheckCircle2, Save, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CalendarCheck, ShieldAlert, CheckCircle2, Save, Calendar, Clock } from 'lucide-react';
 import { ActualEntry, LPSData } from '../../types';
 import { formatDate, generateId } from '../../services/storage';
 
@@ -16,40 +16,137 @@ export const DailyCheckInView: React.FC<DailyCheckInViewProps> = ({
   onSaveDailyActual,
   onResolveConstraint
 }) => {
-  const todayIso = new Date().toISOString().split('T')[0];
+  const getLocalISODate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
 
-  // Active/pending commitments for this week
-  const pendingCommitments = data.commitments
-    .filter((c) => c.week_key === currentWeek && c.outcome !== 'done')
-    .map((c) => {
-      const task = data.tasks.find((t) => t.id === c.task_id);
-      // find latest actual for today if exists
-      const existingActual = data.actuals.find((a) => a.commitment_id === c.id && a.day_date === todayIso);
-      return { commitment: c, task, existingActual };
-    });
+    return `${year}-${month}-${day}`;
+  };
 
-  // Local form state for row entries
+  const todayIso = getLocalISODate();
+
+  const pendingCommitments = useMemo(() => {
+    return data.commitments
+      .filter(
+        (c) =>
+          c.week_key === currentWeek &&
+          c.outcome !== 'done'
+      )
+      .map((commitment) => {
+        const task = data.tasks.find(
+          (t) => t.id === commitment.task_id
+        );
+
+        const existingActual = data.actuals.find(
+          (a) =>
+            a.commitment_id === commitment.id &&
+            a.day_date === todayIso
+        );
+
+        const matchingLookaheadItems = data.lookahead.filter(
+          (l) => l.task_id === commitment.task_id
+        );
+
+        const lookaheadItem =
+          matchingLookaheadItems.find(
+            (l) => l.week_key === commitment.week_key
+          ) ||
+          matchingLookaheadItems[
+            matchingLookaheadItems.length - 1
+          ];
+
+        return {
+          commitment,
+          task,
+          existingActual,
+          lookaheadItem
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          commitment: typeof item.commitment;
+          task: NonNullable<typeof item.task>;
+          existingActual: ActualEntry | undefined;
+          lookaheadItem: typeof item.lookaheadItem;
+        } => !!item.task
+      );
+  }, [
+    data.commitments,
+    data.tasks,
+    data.actuals,
+    data.lookahead,
+    currentWeek,
+    todayIso
+  ]);
+
+  type RowState = {
+    planned: number;
+    achieved: number;
+    note: string;
+    saved: boolean;
+  };
+
   const [rowStates, setRowStates] = useState<
-    Record<string, { planned: number; achieved: number; note: string; saved: boolean }>
-  >(() => {
-    const map: Record<string, { planned: number; achieved: number; note: string; saved: boolean }> = {};
-    data.commitments.forEach((c) => {
-      const existingActual = data.actuals.find((a) => a.commitment_id === c.id && a.day_date === todayIso);
-      map[c.id] = {
-        planned: existingActual?.planned_qty || 10,
-        achieved: existingActual?.achieved_qty || 0,
-        note: existingActual?.note || '',
-        saved: !!existingActual
-      };
-    });
-    return map;
-  });
+    Record<string, RowState>
+  >({});
 
-  const handleRowChange = (commitmentId: string, field: 'planned' | 'achieved' | 'note', value: any) => {
+  useEffect(() => {
+    setRowStates((previous) => {
+      const next: Record<string, RowState> = {};
+
+      pendingCommitments.forEach(
+        ({ commitment, existingActual, lookaheadItem }) => {
+          const previousRow = previous[commitment.id];
+
+          if (existingActual) {
+            next[commitment.id] = {
+              planned: Number(existingActual.planned_qty) || 0,
+              achieved: Number(existingActual.achieved_qty) || 0,
+              note: existingActual.note || '',
+              saved: true
+            };
+            return;
+          }
+
+          if (previousRow && !previousRow.saved) {
+            next[commitment.id] = previousRow;
+            return;
+          }
+
+          next[commitment.id] = {
+            planned:
+              lookaheadItem?.planned_qty != null
+                ? Number(lookaheadItem.planned_qty)
+                : 0,
+            achieved: 0,
+            note: '',
+            saved: false
+          };
+        }
+      );
+
+      return next;
+    });
+  }, [pendingCommitments]);
+
+  const handleRowChange = (
+    commitmentId: string,
+    field: 'planned' | 'achieved' | 'note',
+    value: number | string
+  ) => {
     setRowStates((prev) => ({
       ...prev,
       [commitmentId]: {
-        ...prev[commitmentId],
+        ...(prev[commitmentId] || {
+          planned: 0,
+          achieved: 0,
+          note: '',
+          saved: false
+        }),
         [field]: value,
         saved: false
       }
@@ -60,13 +157,19 @@ export const DailyCheckInView: React.FC<DailyCheckInViewProps> = ({
     const row = rowStates[commitmentId];
     if (!row) return;
 
+    const existingActual = data.actuals.find(
+      (a) =>
+        a.commitment_id === commitmentId &&
+        a.day_date === todayIso
+    );
+
     const actual: ActualEntry = {
-      id: generateId('ACT'),
+      id: existingActual?.id || generateId('ACT'),
       commitment_id: commitmentId,
       day_date: todayIso,
-      planned_qty: Number(row.planned) || 0,
-      achieved_qty: Number(row.achieved) || 0,
-      note: row.note
+      planned_qty: Math.max(0, Number(row.planned) || 0),
+      achieved_qty: Math.max(0, Number(row.achieved) || 0),
+      note: row.note?.trim() || ''
     };
 
     onSaveDailyActual(actual);
@@ -131,9 +234,19 @@ export const DailyCheckInView: React.FC<DailyCheckInViewProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingCommitments.map(({ commitment, task }) => {
+            {pendingCommitments.map(
+              ({ commitment, task, lookaheadItem }) => {
               if (!task) return null;
-              const row = rowStates[commitment.id] || { planned: 10, achieved: 0, note: '', saved: false };
+
+              const row = rowStates[commitment.id] || {
+                planned:
+                  lookaheadItem?.planned_qty != null
+                    ? Number(lookaheadItem.planned_qty)
+                    : 0,
+                achieved: 0,
+                note: '',
+                saved: false
+              };
               const planned = Number(row.planned) || 0;
               const achieved = Number(row.achieved) || 0;
 
@@ -166,15 +279,14 @@ export const DailyCheckInView: React.FC<DailyCheckInViewProps> = ({
                     <div className="text-[10px] text-[#94a3b8] mt-0.5">Location: {task.location} ({task.uom})</div>
                   </div>
 
-                  {/* Planned Input */}
+                  {/* Planned quantity from Lookahead */}
                   <div className="lg:col-span-2">
                     <label className="block text-[10px] font-semibold text-[#94a3b8] mb-1">Planned Today</label>
                     <input
                       type="number"
-                      min="0"
-                      value={row.planned}
-                      onChange={(e) => handleRowChange(commitment.id, 'planned', Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-[#1e293b] border border-[#334155] rounded text-xs text-[#f8fafc] focus:border-[#f59e0b] focus:outline-none"
+                      value={planned}
+                      readOnly
+                      className="w-full px-3 py-2 bg-[#1e293b] border border-[#334155] rounded-lg text-sm text-[#38bdf8] font-bold cursor-not-allowed"
                     />
                   </div>
 
@@ -220,7 +332,8 @@ export const DailyCheckInView: React.FC<DailyCheckInViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+              }
+            )}
           </div>
         )}
       </div>

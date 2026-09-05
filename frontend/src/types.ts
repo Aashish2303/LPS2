@@ -57,6 +57,12 @@ export interface Task {
   must_finish_by: string;
   uom: string;
   status: 'Planned' | 'In Progress' | 'Complete';
+
+  // Imported phase-schedule tasks are false by default.
+  // They become true only when the user explicitly
+  // selects them for Pull Planning.
+  pull_planned?: boolean;
+  lookahead_planned?: boolean;
 }
 
 export type ConstraintType =
@@ -99,6 +105,8 @@ export interface Commitment {
   week_key: string;
   committed_by: string;
   outcome?: 'done' | 'not_done' | 'pending';
+  planned_qty?: number;
+  actual_qty?: number;
   reason_code?: number;
   reason_notes?: string;
   closed_at?: string;

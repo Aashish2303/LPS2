@@ -1,0 +1,378 @@
+[
+  {
+    "id": "PRJ-001",
+    "name": "Chittor Site — Residential Block B",
+    "client": "Apex Urban Infratech",
+    "location": "Chittor Site",
+    "projectCode": "CS-RB2-2026",
+    "startDate": "2026-06-01",
+    "endDate": "2027-04-30",
+    "description": "Migrated existing LPS workspace",
+    "data": {
+      "config": {
+        "projectName": "Chittor Site — Residential Block B",
+        "projectCode": "CS-RB2-2026",
+        "client": "Apex Urban Infratech",
+        "contractor": "Horizon Buildcon Ltd.",
+        "startDate": "2026-06-01",
+        "endDate": "2027-04-30",
+        "projectManager": "Ramesh Krishnan",
+        "leanChampion": "Priya Menon"
+      },
+      "trades": [
+        {
+          "id": "TRD-01",
+          "name": "Civil & Earthworks",
+          "abbr": "CIV"
+        },
+        {
+          "id": "TRD-02",
+          "name": "Formwork & Shuttering",
+          "abbr": "FRM"
+        },
+        {
+          "id": "TRD-03",
+          "name": "Rebar & Steel Fixing",
+          "abbr": "RBR"
+        },
+        {
+          "id": "TRD-04",
+          "name": "Concrete Pouring",
+          "abbr": "CNC"
+        },
+        {
+          "id": "TRD-05",
+          "name": "MEP Services",
+          "abbr": "MEP"
+        },
+        {
+          "id": "TRD-06",
+          "name": "Blockwork & Masonry",
+          "abbr": "MSN"
+        },
+        {
+          "id": "TRD-07",
+          "name": "Waterproofing",
+          "abbr": "WPF"
+        }
+      ],
+      "areas": [
+        {
+          "id": "ARA-01",
+          "name": "Basement B1 Parking",
+          "zone": "Zone A"
+        },
+        {
+          "id": "ARA-02",
+          "name": "Podium Level & Deck",
+          "zone": "Zone B"
+        },
+        {
+          "id": "ARA-03",
+          "name": "Tower L1 to L4 Core",
+          "zone": "Zone C"
+        },
+        {
+          "id": "ARA-04",
+          "name": "Tower L5 to L8 Typical",
+          "zone": "Zone C"
+        },
+        {
+          "id": "ARA-05",
+          "name": "External Yard & Utilities",
+          "zone": "Zone D"
+        }
+      ],
+      "phases": [
+        {
+          "id": "PHA-001",
+          "phase_name": "Phase 1: Substructure & Raft",
+          "milestone": "Raft foundation cast & cured with baseline waterproofing",
+          "planned_start": "2026-06-01",
+          "planned_finish": "2026-08-31",
+          "responsible": "Suresh Verma (Civil Lead)",
+          "status": "Active"
+        },
+        {
+          "id": "PHA-002",
+          "phase_name": "Phase 2: Superstructure RCC Frame",
+          "milestone": "Columns and slab poured up to Level 5 deck",
+          "planned_start": "2026-09-01",
+          "planned_finish": "2026-12-15",
+          "responsible": "Amit Patel (Structures)",
+          "status": "Planned"
+        },
+        {
+          "id": "PHA-003",
+          "phase_name": "Phase 3: MEP & Internal Finishes",
+          "milestone": "First-fix MEP risers and masonry up to Level 4",
+          "planned_start": "2026-11-15",
+          "planned_finish": "2027-03-30",
+          "responsible": "Kavita Rao (Services)",
+          "status": "Planned"
+        },
+        {
+          "id": "PHA-6353",
+          "phase_name": "Tower",
+          "milestone": "Columns",
+          "planned_start": "2026-09-02",
+          "planned_finish": "2026-09-26",
+          "responsible": "Rajesh",
+          "status": "Planned"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "TSK-101",
+          "phase_id": "PHA-001",
+          "description": "Level 1 column rebar tying and starter ties (24 nos)",
+          "trade": "Rebar & Steel Fixing",
+          "responsible": "Gopal Krishna",
+          "location": "Tower L1 to L4 Core",
+          "duration_days": 3,
+          "must_finish_by": "2026-08-30",
+          "uom": "nos",
+          "status": "In Progress"
+        },
+        {
+          "id": "TSK-102",
+          "phase_id": "PHA-001",
+          "description": "Level 1 perimeter formwork erection and alignment",
+          "trade": "Formwork & Shuttering",
+          "responsible": "Venkatesh Babu",
+          "location": "Tower L1 to L4 Core",
+          "duration_days": 4,
+          "must_finish_by": "2026-09-05",
+          "uom": "m²",
+          "status": "Planned"
+        },
+        {
+          "id": "TSK-103",
+          "phase_id": "PHA-001",
+          "description": "MEP electrical conduits & box fixings in column cages",
+          "trade": "MEP Services",
+          "responsible": "Pradeep Nair",
+          "location": "Tower L1 to L4 Core",
+          "duration_days": 2,
+          "must_finish_by": "2026-09-07",
+          "uom": "points",
+          "status": "Planned"
+        },
+        {
+          "id": "TSK-104",
+          "phase_id": "PHA-001",
+          "description": "Pour Grade M40 Self-Compacting Concrete Level 1 cols",
+          "trade": "Concrete Pouring",
+          "responsible": "Rajesh Sharma",
+          "location": "Tower L1 to L4 Core",
+          "duration_days": 2,
+          "must_finish_by": "2026-09-12",
+          "uom": "m³",
+          "status": "Planned"
+        },
+        {
+          "id": "TSK-105",
+          "phase_id": "PHA-002",
+          "description": "Scaffolding staging & table forms for Level 2 slab",
+          "trade": "Formwork & Shuttering",
+          "responsible": "Venkatesh Babu",
+          "location": "Podium Level & Deck",
+          "duration_days": 5,
+          "must_finish_by": "2026-09-20",
+          "uom": "m²",
+          "status": "Planned"
+        }
+      ],
+      "constraints": [
+        {
+          "id": "CON-001",
+          "task_id": "TSK-101",
+          "type": "Materials",
+          "description": "Fe500D 25mm rebar bundles needed at Tower 1 base",
+          "raised_by": "Gopal Krishna",
+          "responsible": "Murugan (Storekeeper)",
+          "raised_date": "2026-08-20",
+          "target_date": "2026-08-24",
+          "status": "Resolved",
+          "resolved_date": "2026-08-23"
+        },
+        {
+          "id": "CON-002",
+          "task_id": "TSK-102",
+          "type": "Drawings",
+          "description": "Architectural column chamfer detail Rev-C approval",
+          "raised_by": "Venkatesh Babu",
+          "responsible": "Ananya Deshmukh (Design Coord)",
+          "raised_date": "2026-08-21",
+          "target_date": "2026-08-25",
+          "status": "Resolved",
+          "resolved_date": "2026-08-25"
+        },
+        {
+          "id": "CON-003",
+          "task_id": "TSK-103",
+          "type": "Approvals",
+          "description": "Consultant sign-off on fire conduit sleeve placement",
+          "raised_by": "Pradeep Nair",
+          "responsible": "Ramesh Krishnan (PM)",
+          "raised_date": "2026-08-24",
+          "target_date": "2026-08-29",
+          "status": "Open"
+        }
+      ],
+      "lookahead": [
+        {
+          "id": "LKH-001",
+          "task_id": "TSK-101",
+          "week_key": "2026-W35",
+          "planned_qty": 24,
+          "ready": true,
+          "notes": "Steel bundles verified at yard"
+        },
+        {
+          "id": "LKH-002",
+          "task_id": "TSK-102",
+          "week_key": "2026-W35",
+          "planned_qty": 180,
+          "ready": true,
+          "notes": "Form panels cleaned & oiled"
+        },
+        {
+          "id": "LKH-003",
+          "task_id": "TSK-103",
+          "week_key": "2026-W35",
+          "planned_qty": 48,
+          "ready": false,
+          "notes": "Awaiting consultant fire sleeve approval"
+        },
+        {
+          "id": "LKH-004",
+          "task_id": "TSK-104",
+          "week_key": "2026-W36",
+          "planned_qty": 65,
+          "ready": true,
+          "notes": "Batching plant pump slot booked"
+        }
+      ],
+      "commitments": [
+        {
+          "id": "COM-001",
+          "task_id": "TSK-101",
+          "week_key": "2026-W35",
+          "committed_by": "Gopal Krishna (Rebar Foreman)",
+          "outcome": "done",
+          "progress_percent": 100,
+          "closed_at": "2026-08-25"
+        },
+        {
+          "id": "COM-002",
+          "task_id": "TSK-102",
+          "week_key": "2026-W35",
+          "committed_by": "Venkatesh Babu (Formwork Lead)",
+          "outcome": "done",
+          "progress_percent": 100,
+          "closed_at": "2026-08-25"
+        },
+        {
+          "id": "COM-003",
+          "task_id": "TSK-103",
+          "week_key": "2026-W35",
+          "committed_by": "Pradeep Nair (MEP Lead)",
+          "outcome": "not_done",
+          "reason_code": 7,
+          "reason_notes": "Heavy grade PVC sleeves delayed at port customs",
+          "progress_percent": 40,
+          "closed_at": "2026-08-25"
+        }
+      ],
+      "actuals": [
+        {
+          "id": "ACT-001",
+          "commitment_id": "COM-001",
+          "day_date": "2026-08-25",
+          "planned_qty": 24,
+          "achieved_qty": 24,
+          "note": "All 24 column cages tied cleanly"
+        },
+        {
+          "id": "ACT-002",
+          "commitment_id": "COM-002",
+          "day_date": "2026-08-25",
+          "planned_qty": 180,
+          "achieved_qty": 180,
+          "note": "Perimeter shutters plumbed & aligned"
+        },
+        {
+          "id": "ACT-003",
+          "commitment_id": "COM-003",
+          "day_date": "2026-08-25",
+          "planned_qty": 48,
+          "achieved_qty": 18,
+          "note": "Only partial sleeves placed"
+        }
+      ],
+      "metrics": [
+        {
+          "week_key": "2026-W33",
+          "ppc": 75,
+          "ta": 5,
+          "tmr": 83,
+          "crr": 80,
+          "total_committed": 8,
+          "total_done": 6,
+          "status": "Closed"
+        },
+        {
+          "week_key": "2026-W34",
+          "ppc": 88,
+          "ta": 7,
+          "tmr": 88,
+          "crr": 100,
+          "total_committed": 8,
+          "total_done": 7,
+          "status": "Closed"
+        },
+        {
+          "week_key": "2026-W35",
+          "ppc": 67,
+          "ta": 3,
+          "tmr": 75,
+          "crr": 67,
+          "total_committed": 3,
+          "total_done": 2,
+          "status": "Open"
+        }
+      ],
+      "closeouts": [
+        {
+          "week_key": "2026-W33",
+          "closed_by": "Priya Menon (Lean Champion)",
+          "closed_at": "2026-08-15T17:00:00Z",
+          "ppc": 75,
+          "notes": "Good coordination on rebar delivery."
+        },
+        {
+          "week_key": "2026-W34",
+          "closed_by": "Priya Menon (Lean Champion)",
+          "closed_at": "2026-08-22T17:30:00Z",
+          "ppc": 88,
+          "notes": "Excellent make-ready flow. Zero safety stoppages."
+        }
+      ],
+      "learnProgress": [
+        {
+          "topic_id": 1,
+          "score": 100,
+          "passed": true,
+          "completed_at": "2026-08-20"
+        },
+        {
+          "topic_id": 2,
+          "score": 100,
+          "passed": true,
+          "completed_at": "2026-08-21"
+        }
+      ]
+    }
+  }
+]

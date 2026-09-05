@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Award,
   ShieldAlert,
@@ -6,20 +6,22 @@ import {
   AlertCircle,
   Clock,
   Sparkles,
-  TrendingUp,
   ArrowRight,
-  Layers,
-  HelpCircle,
-  Lock
+  Lock,
+  Calendar
 } from 'lucide-react';
-import { Commitment, LPSData, REASON_CODES } from '../../types';
+import { LPSData, REASON_CODES } from '../../types';
 import { computeMetrics, getCoachingDiagnosis } from '../../services/storage';
 
 interface CloseOutWeekViewProps {
   data: LPSData;
   currentWeek: string;
-  onUpdateCommitmentOutcome: (commitmentId: string, outcome: 'done' | 'not_done', reasonCode?: number) => void;
-  onCloseOutWeek: (weekKey: string, finalPpc: number) => void;
+  onUpdateCommitmentOutcome: (commitmentId: string, outcome: 'done' | 'not_done', reasonCode?: number, actualQty?: number) => void;
+  onCloseOutWeek: (
+    weekKey: string,
+    finalPpc: number,
+    closeoutDate: string
+  ) => void;
   onNavigateToDashboard: () => void;
 }
 
@@ -32,14 +34,57 @@ export const CloseOutWeekView: React.FC<CloseOutWeekViewProps> = ({
 }) => {
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [closedPpc, setClosedPpc] = useState<number | null>(null);
+  const [closeoutDate, setCloseoutDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
 
-  // Commitments for this week
-  const weekCommitments = data.commitments
-    .filter((c) => c.week_key === currentWeek)
-    .map((c) => {
-      const task = data.tasks.find((t) => t.id === c.task_id);
-      return { commitment: c, task };
-    });
+  const weekCommitments = useMemo(() => {
+    return data.commitments
+      .filter((commitment) => commitment.week_key === currentWeek)
+      .map((commitment) => {
+        const task = data.tasks.find(
+          (item) => item.id === commitment.task_id
+        );
+
+        const lookahead = data.lookahead.find(
+          (item) =>
+            item.task_id === commitment.task_id &&
+            item.week_key === commitment.week_key
+        ) ||
+        data.lookahead.find(
+          (item) => item.task_id === commitment.task_id
+        );
+
+        const plannedQty = Number(
+          commitment.planned_qty ??
+            lookahead?.planned_qty ??
+            0
+        );
+
+        const actualQty = Number(
+          commitment.actual_qty ?? 0
+        );
+
+        const quantityProgress =
+          plannedQty > 0
+            ? Math.min(
+                100,
+                Math.round(
+                  (actualQty / plannedQty) * 100
+                )
+              )
+            : 0;
+
+        return {
+          commitment,
+          task,
+          lookahead,
+          plannedQty,
+          actualQty,
+          quantityProgress
+        };
+      });
+  }, [data.commitments, data.tasks, data.lookahead, currentWeek]);
 
   const totalCommitted = weekCommitments.length;
   const doneCount = weekCommitments.filter((c) => c.commitment.outcome === 'done').length;
@@ -60,23 +105,19 @@ export const CloseOutWeekView: React.FC<CloseOutWeekViewProps> = ({
   // Live PPC Preview (Binary)
   const livePpc = totalCommitted > 0 ? Math.round((doneCount / totalCommitted) * 100) : 0;
 
-  const handleToggleOutcome = (commitmentId: string, outcome: 'done' | 'not_done') => {
-    if (outcome === 'done') {
-      onUpdateCommitmentOutcome(commitmentId, 'done', undefined);
-    } else {
-      // Default to reason code 1 or keep existing
-      const existing = weekCommitments.find((c) => c.commitment.id === commitmentId)?.commitment;
-      onUpdateCommitmentOutcome(commitmentId, 'not_done', existing?.reason_code || 1);
-    }
-  };
-
   const handleSelectReason = (commitmentId: string, reasonCode: number) => {
     onUpdateCommitmentOutcome(commitmentId, 'not_done', reasonCode);
   };
 
   const handleExecuteCloseOut = () => {
     if (!allRecorded) return;
-    onCloseOutWeek(currentWeek, livePpc);
+
+    onCloseOutWeek(
+      currentWeek,
+      livePpc,
+      closeoutDate
+    );
+
     setClosedPpc(livePpc);
     setShowRevealModal(true);
   };
@@ -177,10 +218,31 @@ export const CloseOutWeekView: React.FC<CloseOutWeekViewProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {weekCommitments.map(({ commitment, task }) => {
+            {weekCommitments.map(
+              ({
+                commitment,
+                task,
+                plannedQty,
+                actualQty,
+                quantityProgress
+              }) => {
               if (!task) return null;
-              const isDone = commitment.outcome === 'done';
-              const isNotDone = commitment.outcome === 'not_done';
+              const autoDone =
+                plannedQty > 0 &&
+                actualQty >= plannedQty;
+
+              const autoNotDone =
+                plannedQty > 0 &&
+                actualQty < plannedQty &&
+                actualQty > 0;
+
+              const isDone =
+                commitment.outcome === 'done' ||
+                autoDone;
+
+              const isNotDone =
+                commitment.outcome === 'not_done' ||
+                autoNotDone;
 
               return (
                 <div
@@ -208,34 +270,120 @@ export const CloseOutWeekView: React.FC<CloseOutWeekViewProps> = ({
                       <div className="text-xs text-[#94a3b8] mt-0.5">Location: {task.location} ({task.uom})</div>
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                      <div className="p-3 rounded-lg bg-slate-900 border border-[#334155]">
+                        <div className="text-[10px] uppercase text-[#64748b]">
+                          Planned Quantity
+                        </div>
+                        <div className="text-sm font-bold text-[#f8fafc] mt-1">
+                          {plannedQty} {task.uom}
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-slate-900 border border-[#334155]">
+                        <label className="text-[10px] uppercase text-[#64748b]">
+                          Actual Quantity
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={actualQty}
+                          onChange={(e) => {
+                            const nextActualQty =
+                              Number(e.target.value) || 0;
+
+                            if (plannedQty <= 0) {
+                              onUpdateCommitmentOutcome(
+                                commitment.id,
+                                'not_done',
+                                commitment.reason_code || 1,
+                                nextActualQty
+                              );
+                              return;
+                            }
+
+                            const progress = Math.min(
+                              100,
+                              Math.round(
+                                (nextActualQty / plannedQty) *
+                                  100
+                              )
+                            );
+
+                            const outcome =
+                              progress >= 100
+                                ? 'done'
+                                : 'not_done';
+
+                            onUpdateCommitmentOutcome(
+                              commitment.id,
+                              outcome,
+                              outcome === 'not_done'
+                                ? commitment.reason_code || 1
+                                : undefined,
+                              nextActualQty
+                            );
+
+                          }}
+                          className="w-full mt-1 px-3 py-2 bg-[#0f172a] border border-[#334155] rounded text-sm text-[#f8fafc]"
+                        />
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-slate-900 border border-[#334155]">
+                        <div className="text-[10px] uppercase text-[#64748b]">
+                          Quantity Progress
+                        </div>
+                        <div className="text-lg font-bold text-[#10b981] mt-1">
+                          {quantityProgress}%
+                        </div>
+
+                        <div className="w-full h-2 bg-[#0f172a] rounded-full overflow-hidden mt-2">
+                          <div
+                            className="h-full bg-[#10b981] rounded-full transition-all duration-300"
+                            style={{
+                              width: `${quantityProgress}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Binary Toggle Buttons */}
                     <div className="flex items-center gap-2">
                       <button
                         id={`btn-mark-done-${commitment.id}`}
                         type="button"
-                        onClick={() => handleToggleOutcome(commitment.id, 'done')}
+                        disabled
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                           isDone
                             ? 'bg-[#10b981] text-[#0f172a] shadow-lg shadow-emerald-500/20 scale-105'
-                            : 'bg-slate-900 text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155]'
+                            : 'bg-slate-900 text-[#64748b] border border-[#334155] cursor-not-allowed'
                         }`}
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>✅ Done (100%)</span>
+                        <span>
+                          {autoDone
+                            ? '✅ Done (100%)'
+                            : '✅ Done (Manual)'}
+                        </span>
                       </button>
 
                       <button
                         id={`btn-mark-notdone-${commitment.id}`}
                         type="button"
-                        onClick={() => handleToggleOutcome(commitment.id, 'not_done')}
+                        disabled
                         className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                           isNotDone
                             ? 'bg-[#ef4444] text-[#f8fafc] shadow-lg shadow-red-500/20 scale-105'
-                            : 'bg-slate-900 text-[#94a3b8] hover:text-[#f8fafc] border border-[#334155]'
+                            : 'bg-slate-900 text-[#64748b] border border-[#334155] cursor-not-allowed'
                         }`}
                       >
                         <AlertCircle className="w-4 h-4" />
-                        <span>❌ Not Done (0%)</span>
+                        <span>
+                          {autoNotDone
+                            ? '❌ Not Done (0%)'
+                            : '❌ Not Done (Manual)'}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -262,12 +410,30 @@ export const CloseOutWeekView: React.FC<CloseOutWeekViewProps> = ({
                   )}
                 </div>
               );
-            })}
+              }
+            )}
           </div>
         )}
       </div>
 
       {/* Close Out Action Button */}
+      <div className="p-4 rounded-lg bg-[#1e293b] border border-[#334155]">
+        <label className="block text-xs font-semibold text-[#94a3b8] mb-2">
+          Close Out Date
+        </label>
+
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#f59e0b]" />
+
+          <input
+            type="date"
+            value={closeoutDate}
+            onChange={(e) => setCloseoutDate(e.target.value)}
+            className="px-3 py-2 bg-[#0f172a] border border-[#334155] rounded-lg text-sm text-[#f8fafc]"
+          />
+        </div>
+      </div>
+
       <div className="p-6 rounded-lg bg-[#1e293b] border border-[#334155] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
         <div className="text-xs text-[#94a3b8]">
           {allRecorded ? (

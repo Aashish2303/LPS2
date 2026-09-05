@@ -18,14 +18,20 @@ import {
   saveLPSData,
   resetToSampleData,
   computeMetrics,
+  generateId,
+  getOpenConstraintCount,
   refreshLookaheadReadiness,
   exportDataAsJSON,
   exportDataAsSpreadsheet,
   importDataFromJSON,
   getOpenConstraintsCountTotal,
+  getSessionUser,
   loadProjects,
   saveProjects,
-  syncProjectsFromServer
+  setSessionUser,
+  clearSessionUser,
+  syncProjectsFromServer,
+  syncProjectData
 } from './services/storage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -50,26 +56,92 @@ import { TradesAreasView } from './components/views/TradesAreasView';
 import { InitializeSystemView } from './components/views/InitializeSystemView';
 import { ProjectDashboard } from './components/ProjectDashboard';
 
+type ProjectRecordPayload = ProjectRecord & {
+  project_code?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+};
+
+const createUserSession = (email: string): UserSession => ({
+  id: email,
+  name: email.split('@')[0].replace(/[._-]+/g, ' '),
+  email,
+  role: 'Project Manager'
+});
+
+const normalizeProjectRecord = (project: ProjectRecordPayload): ProjectRecord => ({
+  ...project,
+  projectCode: project.projectCode ?? project.project_code ?? '',
+  startDate: project.startDate ?? project.start_date ?? '',
+  endDate: project.endDate ?? project.end_date ?? '',
+  description: project.description ?? '',
+  data: project.data ?? loadLPSData()
+});
+
 export function App() {
   // 1. User Session state
-  const [user, setUser] = useState<UserSession | null>(null);
+  const [user, setUser] = useState<UserSession | null>(() => {
+    const email = getSessionUser();
+    return email ? createUserSession(email) : null;
+  });
 
   // 2. Main LPS Dataset state
   const [data, setData] = useState<LPSData>(() => loadLPSData());
-  const [projects, setProjects] = useState<ProjectRecord[]>(() => loadProjects());
+  const [projects, setProjects] = useState<ProjectRecord[]>(() =>
+    loadProjects().map(normalizeProjectRecord)
+  );
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    void syncProjectsFromServer().then((remoteProjects) => {
-      if (!remoteProjects) return;
-      if (remoteProjects.length === 0 && projects.length > 0) {
-        saveProjects(projects);
-        return;
-      }
-      setProjects(remoteProjects);
-    });
-  }, [user]);
+  if (!user) return;
+
+  let isActive = true;
+
+  const loadRemoteProjects = async () => {
+    const remoteProjects = await syncProjectsFromServer();
+
+    if (!isActive || !remoteProjects) {
+      return;
+    }
+
+    const normalizedProjects =
+      remoteProjects.map(normalizeProjectRecord);
+
+    setProjects(normalizedProjects);
+
+    if (!selectedProjectId) {
+      return;
+    }
+
+    const fullProject = await syncProjectData(
+      selectedProjectId
+    );
+
+    if (!isActive || !fullProject) {
+      return;
+    }
+
+    const normalizedFullProject =
+      normalizeProjectRecord(fullProject);
+
+    setData(normalizedFullProject.data);
+    saveLPSData(normalizedFullProject.data);
+
+    setProjects((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === normalizedFullProject.id
+          ? normalizedFullProject
+          : project
+      )
+    );
+  };
+
+  void loadRemoteProjects();
+
+  return () => {
+    isActive = false;
+  };
+}, [user, selectedProjectId]);
 
   // 3. Navigation & Mobile Drawer state
   const [activeNav, setActiveNav] = useState<NavItemKey>('dashboard');
@@ -86,25 +158,44 @@ export function App() {
   };
 
   // Sync data to localStorage on changes
-  const updateData = (newData: LPSData) => {
+  const updateData = async (newData: LPSData) => {
     setData(newData);
     saveLPSData(newData);
-    if (selectedProjectId) {
-      const updatedProjects = projects.map((project) =>
-        project.id === selectedProjectId ? { ...project, data: newData } : project
-      );
-      setProjects(updatedProjects);
-      saveProjects(updatedProjects);
+
+    if (!selectedProjectId) {
+      return;
     }
+
+    const updatedProjects = projects.map((project) =>
+      project.id === selectedProjectId
+        ? {
+            ...project,
+            data: newData
+          }
+        : project
+    );
+
+    setProjects(updatedProjects);
+
+    const saved = await saveProjects(updatedProjects);
+
+    if (!saved) {
+      showToast(
+        'Failed to save changes to server',
+        'error'
+      );
+      return;
+    }
+
+    showToast(
+      'Changes saved successfully',
+      'success'
+    );
   };
 
   const handleLogin = (email: string) => {
-    const newUser: UserSession = {
-      id: `USR-${Date.now()}`,
-      name: email.split('@')[0].replace(/[._-]+/g, ' '),
-      email,
-      role: 'Project Manager'
-    };
+    const newUser = createUserSession(email);
+    setSessionUser(email);
     setUser(newUser);
     setSelectedProjectId(null);
     showToast(`Welcome back, ${newUser.name}!`, 'success');
@@ -112,7 +203,7 @@ export function App() {
 
   const handleLogout = () => {
     setUser(null);
-    localStorage.removeItem('lps_user_session');
+    clearSessionUser();
     setSelectedProjectId(null);
     showToast('Logged out of LPS session', 'info');
   };
@@ -124,6 +215,63 @@ export function App() {
   };
 
   const currentWeek = data.config.current_week_key;
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+
+    const missingLookaheadTasks = data.tasks.filter(
+      (task) =>
+        task.pull_planned === true &&
+        !data.lookahead.some(
+          (item) => item.task_id === task.id
+        )
+    );
+
+    if (missingLookaheadTasks.length === 0) {
+      return;
+    }
+
+    const newLookaheadItems: LookaheadItem[] =
+      missingLookaheadTasks.map((task) => {
+        const openConstraints =
+          getOpenConstraintCount(
+            task.id,
+            data.constraints
+          );
+
+        return {
+          id: generateId('LKH'),
+          task_id: task.id,
+          week_key: currentWeek,
+          planned_qty: 1,
+          ready: openConstraints === 0,
+          notes: 'Automatically added from Pull Planning'
+        };
+      });
+
+    const updatedTasks = data.tasks.map((task) =>
+      missingLookaheadTasks.some(
+        (missing) => missing.id === task.id
+      )
+        ? {
+            ...task,
+            lookahead_planned: true
+          }
+        : task
+    );
+
+    void updateData({
+      ...data,
+      tasks: updatedTasks,
+      lookahead: refreshLookaheadReadiness(
+        [
+          ...data.lookahead,
+          ...newLookaheadItems
+        ],
+        data.constraints
+      )
+    });
+  }, [selectedProjectId, data.tasks, data.lookahead]);
 
   // Compute live metrics for the current week
   const metrics = useMemo(() => computeMetrics(currentWeek, data), [currentWeek, data]);
@@ -175,7 +323,6 @@ export function App() {
     updateData(updated);
     showToast(`Task '${t.description}' created`, 'success');
   };
-
   const handleDeleteTask = (id: string) => {
     const updated = {
       ...data,
@@ -186,6 +333,162 @@ export function App() {
     };
     updateData(updated);
     showToast('Task removed from all boards', 'info');
+  };
+
+  const handleTogglePullPlanTask = (taskId: string) => {
+    const task = data.tasks.find(
+      (t) => t.id === taskId
+    );
+
+    if (!task) return;
+
+    const newPullPlanned =
+      !(task.pull_planned ?? false);
+
+    /*
+     * ---------------------------------------------------------
+     * UPDATE TASK PULL-PLANNED STATUS
+     * ---------------------------------------------------------
+     */
+
+    const updatedTasks = data.tasks.map((t) =>
+      t.id === taskId
+        ? {
+            ...t,
+              pull_planned: newPullPlanned,
+              lookahead_planned: newPullPlanned
+          }
+        : t
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * AUTOMATIC PULL PLAN → LOOKAHEAD FLOW
+     * ---------------------------------------------------------
+     *
+     * When a task is selected for Pull Planning:
+     *
+     * 1. Automatically create its Lookahead record.
+     * 2. Use the task's scheduled finish date to determine
+     *    the initial Lookahead week.
+     * 3. Automatically calculate readiness from constraints.
+     *
+     * When a task is removed from Pull Planning:
+     *
+     * 4. Remove its Lookahead record as well.
+     *
+     * No second manual data entry is required.
+     * ---------------------------------------------------------
+     */
+
+    let updatedLookahead = [...data.lookahead];
+
+    if (newPullPlanned) {
+      /*
+       * Prevent duplicate Lookahead entries.
+       */
+      const alreadyInLookahead =
+        updatedLookahead.some(
+          (item) =>
+            item.task_id === taskId
+        );
+
+      if (!alreadyInLookahead) {
+        /*
+         * Determine the Lookahead week.
+         *
+         * Prefer the task's must_finish_by date.
+         * Fall back to the current project week.
+         */
+        const taskDate =
+          task.must_finish_by
+            ? new Date(task.must_finish_by)
+            : null;
+
+        let weekKey = currentWeek;
+
+        if (
+          taskDate &&
+          !isNaN(taskDate.getTime())
+        ) {
+          const year =
+            taskDate.getFullYear();
+
+          const startOfYear =
+            new Date(year, 0, 1);
+
+          const dayOfYear =
+            Math.floor(
+              (taskDate.getTime() -
+                startOfYear.getTime()) /
+                86400000
+            ) + 1;
+
+          const weekNumber =
+            Math.ceil(
+              (dayOfYear +
+                startOfYear.getDay()) /
+                7
+            );
+
+          weekKey =
+            `${year}-W${String(
+              weekNumber
+            ).padStart(2, '0')}`;
+        }
+
+        /*
+         * Readiness is determined automatically
+         * from the current constraint state.
+         */
+        const openConstraints =
+          getOpenConstraintCount(
+            taskId,
+            data.constraints
+          );
+
+        const newLookaheadItem: LookaheadItem = {
+          id: generateId('LKH'),
+          task_id: taskId,
+          week_key: weekKey,
+          planned_qty: 1,
+          ready: openConstraints === 0,
+          notes: ''
+        };
+
+        updatedLookahead.push(
+          newLookaheadItem
+        );
+      }
+    } else {
+      /*
+       * Removing a task from Pull Planning
+       * also removes it from Lookahead.
+       */
+      updatedLookahead =
+        updatedLookahead.filter(
+          (item) =>
+            item.task_id !== taskId
+        );
+    }
+
+    /*
+     * Recalculate readiness after the change.
+     */
+    updatedLookahead =
+      refreshLookaheadReadiness(
+        updatedLookahead,
+        data.constraints
+      );
+
+    /*
+     * Save the complete updated workspace.
+     */
+    updateData({
+      ...data,
+      tasks: updatedTasks,
+      lookahead: updatedLookahead
+    });
   };
 
   // Constraint Actions
@@ -243,46 +546,138 @@ export function App() {
   const handleUpdateCommitmentOutcome = (
     commitmentId: string,
     outcome: 'done' | 'not_done',
-    reasonCode?: number
+    reasonCode?: number,
+    actualQty?: number
   ) => {
     const updatedCommitments = data.commitments.map((c) => {
-      if (c.id === commitmentId) {
-        return {
-          ...c,
-          outcome,
-          reason_code: reasonCode,
-          progress_percent: outcome === 'done' ? 100 : c.progress_percent
-        };
-      }
-      return c;
+      if (c.id !== commitmentId) return c;
+
+      const plannedQty = Number(c.planned_qty ?? 0);
+      const actual = Number(actualQty ?? c.actual_qty ?? 0);
+
+      // Automatically calculate quantity progress
+      const progress =
+        plannedQty > 0
+          ? Math.min(
+              100,
+              Math.round((actual / plannedQty) * 100)
+            )
+          : 0;
+
+      // Quantity determines the final outcome
+      const autoOutcome: 'done' | 'not_done' =
+        plannedQty > 0 && actual >= plannedQty
+          ? 'done'
+          : 'not_done';
+
+      return {
+        ...c,
+        outcome: autoOutcome,
+        reason_code:
+          autoOutcome === 'not_done'
+            ? (reasonCode ?? c.reason_code ?? 1)
+            : undefined,
+        actual_qty: actual,
+        progress_percent: progress
+      };
     });
-    updateData({ ...data, commitments: updatedCommitments });
+
+    updateData({
+      ...data,
+      commitments: updatedCommitments
+    });
   };
 
   const handleSaveDailyActual = (actual: ActualEntry) => {
     const existingIndex = data.actuals.findIndex(
-      (a) => a.commitment_id === actual.commitment_id && a.day_date === actual.day_date
+      (a) =>
+        a.commitment_id === actual.commitment_id &&
+        a.day_date === actual.day_date
     );
-    let updatedActuals = [...data.actuals];
+
+    const updatedActuals = [...data.actuals];
+
     if (existingIndex >= 0) {
       updatedActuals[existingIndex] = actual;
     } else {
       updatedActuals.push(actual);
     }
-    updateData({ ...data, actuals: updatedActuals });
-    showToast('Daily production actual recorded', 'success');
+
+    const updatedCommitments = data.commitments.map(
+      (commitment) => {
+        if (commitment.id !== actual.commitment_id) {
+          return commitment;
+        }
+
+        const commitmentLookahead = data.lookahead.find(
+          (lookahead) =>
+            lookahead.task_id === commitment.task_id &&
+            lookahead.week_key === commitment.week_key
+        );
+
+        const plannedQty =
+          Number(commitmentLookahead?.planned_qty) || 0;
+
+        const commitmentActuals = updatedActuals.filter(
+          (entry) =>
+            entry.commitment_id === commitment.id
+        );
+
+        const cumulativeAchieved = commitmentActuals.reduce(
+          (sum, entry) =>
+            sum + (Number(entry.achieved_qty) || 0),
+          0
+        );
+
+        const progressPercent =
+          plannedQty > 0
+            ? Math.min(
+                100,
+                Math.round(
+                  (cumulativeAchieved / plannedQty) *
+                    100
+                )
+              )
+            : 0;
+
+        return {
+          ...commitment,
+          progress_percent: progressPercent
+        };
+      }
+    );
+
+    updateData({
+      ...data,
+      actuals: updatedActuals,
+      commitments: updatedCommitments
+    });
+
+    showToast(
+      'Daily production actual recorded and progress updated',
+      'success'
+    );
   };
 
-  const handleCloseOutWeek = (weekKey: string, finalPpc: number) => {
-    // Record or update in metrics history
-    const existingIdx = data.metrics.findIndex((m) => m.week_key === weekKey);
-    let updatedMetrics = [...data.metrics];
+  const handleCloseOutWeek = (
+    weekKey: string,
+    finalPpc: number,
+    closeoutDate: string
+  ) => {
+    // Record or update the weekly metrics history
+    const existingIdx = data.metrics.findIndex(
+      (m) => m.week_key === weekKey
+    );
+
     const newRecord = {
       ...metrics,
       week_key: weekKey,
       ppc: finalPpc,
+      closed_at: closeoutDate,
       status: 'Closed' as const
     };
+
+    const updatedMetrics = [...data.metrics];
 
     if (existingIdx >= 0) {
       updatedMetrics[existingIdx] = newRecord;
@@ -290,8 +685,15 @@ export function App() {
       updatedMetrics.push(newRecord);
     }
 
-    updateData({ ...data, metrics: updatedMetrics });
-    showToast(`Week ${weekKey} successfully sealed with PPC ${finalPpc}%!`, 'success');
+    updateData({
+      ...data,
+      metrics: updatedMetrics
+    });
+
+    showToast(
+      `Week ${weekKey} successfully sealed with PPC ${finalPpc}%!`,
+      'success'
+    );
   };
 
   // Learning Progress
@@ -336,12 +738,13 @@ export function App() {
   };
 
   const handleSelectProject = (project: ProjectRecord) => {
-    setSelectedProjectId(project.id);
-    setData(project.data);
-    saveLPSData(project.data);
+    const selectedProject = normalizeProjectRecord(project);
+
+    setSelectedProjectId(selectedProject.id);
+    setData(selectedProject.data);
+    saveLPSData(selectedProject.data);
     setActiveNav('dashboard');
   };
-
   const createProjectData = (details: {
     name: string;
     client: string;
@@ -379,12 +782,27 @@ export function App() {
     learnProgress: []
   });
 
-  const handleCreateProject = (project: ProjectRecord) => {
-    const updatedProjects = [...projects, project];
+  const handleCreateProject = async (project: ProjectRecord) => {
+    const normalizedProject = normalizeProjectRecord(project);
+    const updatedProjects = [...projects, normalizedProject];
+
+    const saved = await saveProjects(updatedProjects);
+
+    if (!saved) {
+      showToast(
+        'Failed to create project on server',
+        'error'
+      );
+      return;
+    }
+
     setProjects(updatedProjects);
-    saveProjects(updatedProjects);
-    handleSelectProject(project);
-    showToast(`Project '${project.name}' created`, 'success');
+    handleSelectProject(normalizedProject);
+
+    showToast(
+      `Project '${normalizedProject.name}' created`,
+      'success'
+    );
   };
 
   const handleImportJSON = (imported: LPSData) => {
@@ -528,6 +946,7 @@ export function App() {
               onAddTask={handleAddTask}
               onDeleteTask={handleDeleteTask}
               onAddConstraint={handleAddConstraint}
+              onTogglePullPlanTask={handleTogglePullPlanTask}
             />
           )}
 
