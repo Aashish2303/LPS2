@@ -5,12 +5,16 @@ import express, {
   Response,
   NextFunction
 } from 'express';
+import path from 'node:path';
 
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 
 const port = Number(process.env.PORT) || 4000;
+const frontendDistPath =
+  process.env.FRONTEND_DIST_DIR ||
+  path.resolve(process.cwd(), 'frontend/dist');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 
@@ -59,7 +63,7 @@ app.use(
   ) => {
     response.setHeader(
       'Access-Control-Allow-Origin',
-      '*'
+      process.env.CORS_ORIGIN || '*'
     );
 
     response.setHeader(
@@ -90,6 +94,13 @@ app.use(
 app.get(
   '/',
   (_request: Request, response: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      response.sendFile(
+        path.join(frontendDistPath, 'index.html')
+      );
+      return;
+    }
+
     response.json({
       status: 'ok',
       service: 'LPS Tool Backend',
@@ -1752,6 +1763,29 @@ app.use(
     });
   }
 );
+
+/*
+ * ---------------------------------------------------------
+ * Frontend static files
+ * ---------------------------------------------------------
+ *
+ * The production container serves the Vite build from the same
+ * origin as the API. This keeps VITE_API_BASE_URL empty in the
+ * production frontend and avoids cross-origin deployment issues.
+ */
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(frontendDistPath));
+
+  app.get(
+    /^(?!\/api(?:\/|$)).*/,
+    (_request: Request, response: Response) => {
+      response.sendFile(
+        path.join(frontendDistPath, 'index.html')
+      );
+    }
+  );
+}
 
 
 /*

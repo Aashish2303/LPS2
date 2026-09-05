@@ -7,10 +7,15 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "backend:dev": "tsx backend/server.ts",
     "backend:start": "tsx backend/server.ts",
-    "build": "vite build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "node backend/dist/server.js",
+    "start:prod": "npm run build && npm run start",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check": "npm run lint && npm run build"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

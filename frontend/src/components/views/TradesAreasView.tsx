@@ -46,14 +46,40 @@ export const TradesAreasView: React.FC<TradesAreasViewProps> = ({
   const handleAddArea = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newArea.trim()) return;
-    if (data.areas.includes(newArea.trim())) return;
 
-    onUpdateAreas([...data.areas, newArea.trim()]);
+    if (
+      data.areas.some(
+        (area) =>
+          (typeof area === 'string'
+            ? area
+            : area.name) === newArea.trim()
+      )
+    ) {
+      return;
+    }
+
+    onUpdateAreas([
+      ...data.areas.map((area) =>
+        typeof area === 'string' ? area : area.name
+      ),
+      newArea.trim()
+    ]);
     setNewArea('');
   };
 
   const handleDeleteArea = (area: string) => {
-    onUpdateAreas(data.areas.filter((a) => a !== area));
+    onUpdateAreas(
+      data.areas
+        .filter(
+          (item) =>
+            (typeof item === 'string'
+              ? item
+              : item.name) !== area
+        )
+        .map((item) =>
+          typeof item === 'string' ? item : item.name
+        )
+    );
   };
 
   return (
@@ -174,25 +200,32 @@ export const TradesAreasView: React.FC<TradesAreasViewProps> = ({
 
             {/* List of Areas */}
             <div className="space-y-2 max-h-80 overflow-y-auto py-3">
-              {data.areas.map((area) => (
+              {data.areas.map((area) => {
+                const areaName =
+                  typeof area === 'string'
+                    ? area
+                    : area.name;
+
+                return (
                 <div
-                  key={area}
+                  key={areaName}
                   className="p-3 rounded-lg bg-[#0f172a] border border-[#334155] flex items-center justify-between gap-3"
                 >
                   <div className="text-xs font-semibold text-[#f8fafc] flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-[#10b981]" />
-                    <span>{area}</span>
+                    <span>{areaName}</span>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => handleDeleteArea(area)}
+                    onClick={() => handleDeleteArea(areaName)}
                     className="p-1.5 text-slate-500 hover:text-red-400 rounded transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
