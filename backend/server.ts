@@ -5,6 +5,7 @@ import express, {
   Response,
   NextFunction
 } from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { createClient } from '@supabase/supabase-js';
@@ -15,6 +16,10 @@ const port = Number(process.env.PORT) || 4000;
 const frontendDistPath =
   process.env.FRONTEND_DIST_DIR ||
   path.resolve(process.cwd(), 'frontend/dist');
+const frontendIndexPath =
+  path.join(frontendDistPath, 'index.html');
+const hasFrontendBuild =
+  fs.existsSync(frontendIndexPath);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 
@@ -94,9 +99,12 @@ app.use(
 app.get(
   '/',
   (_request: Request, response: Response) => {
-    if (process.env.NODE_ENV === 'production') {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      hasFrontendBuild
+    ) {
       response.sendFile(
-        path.join(frontendDistPath, 'index.html')
+        frontendIndexPath
       );
       return;
     }
@@ -1774,14 +1782,17 @@ app.use(
  * production frontend and avoids cross-origin deployment issues.
  */
 
-if (process.env.NODE_ENV === 'production') {
+if (
+  process.env.NODE_ENV === 'production' &&
+  hasFrontendBuild
+) {
   app.use(express.static(frontendDistPath));
 
   app.get(
     /^(?!\/api(?:\/|$)).*/,
     (_request: Request, response: Response) => {
       response.sendFile(
-        path.join(frontendDistPath, 'index.html')
+        frontendIndexPath
       );
     }
   );
