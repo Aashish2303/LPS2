@@ -17,6 +17,22 @@ const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || ''
 ).replace(/\/$/, '');
 
+async function readApiResponse(
+  response: Response
+): Promise<Record<string, any>> {
+  const body = await response.text();
+
+  try {
+    return JSON.parse(body) as Record<string, any>;
+  } catch {
+    return {
+      error:
+        body.trim() ||
+        `Backend returned HTTP ${response.status}.`
+    };
+  }
+}
+
 /*
  * ---------------------------------------------------------
  * Helpers
@@ -472,7 +488,7 @@ export async function importPhaseSchedule(
     }
   );
 
-  const result = await response.json();
+  const result = await readApiResponse(response);
 
   if (!response.ok) {
     throw new Error(
